@@ -1,77 +1,74 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-type Task = {
-  completed: boolean;
-  id: string;
-  title: string;
-};
-
-function Tasks() {
+function App() {
+  const [todos, setTodos] = useState<{id: number, text: string, completed: boolean}[]>([]);
   const [input, setInput] = useState("");
-  const [tasks, setTasks] = useState<Task[]>([]);
 
-  function onSaveTask() {
-    setTasks([
-      ...tasks,
-      { completed: false, id: crypto.randomUUID(), title: input },
-    ]);
+  const [seconds, setSeconds] = useState(25 * 60);
+  const [isActive, setIsActive] = useState(false);
 
-    setInput("");
-  }
+  const handleAdd = () => {
+    if (input.trim()) {
+      setTodos([...todos, { id: Date.now(), text: input, completed: false }]);
+      setInput("");
+    }
+  };
 
-  function completeTask({ id }: Task) {
-    setTasks(
-      tasks.map((task) => {
-        if (task.id === id) {
-          return {
-            ...task,
-            completed: !task.completed,
-          };
-        }
+  useEffect(() => {
+    let interval: number;
+    if (isActive && seconds > 0) {
+      interval = setInterval(() => setSeconds(s => s - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isActive, seconds]);
 
-        return task;
-      }),
-    );
-  }
+  const formatTime = (s: number) => {
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <>
-      <div>
-        <input
-          className="p-2 border-1"
-          type="text"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-        />
-
-        <button className="rounded p-2 bg-black" onClick={onSaveTask}>
-          Save
+    <div style={{ padding: '2rem', maxWidth: '400px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      
+      <section style={{ marginBottom: '2rem', textAlign: 'center', borderBottom: '1px solid #eee', paddingBottom: '1rem' }}>
+        <h2>Pomodoro: {formatTime(seconds)}</h2>
+        <button onClick={() => setIsActive(!isActive)}>
+          {isActive ? 'Pausar' : 'Iniciar'}
         </button>
-      </div>
+        <button onClick={() => {setSeconds(25 * 60); setIsActive(false)}} style={{ marginLeft: '8px' }}>
+          Reset
+        </button>
+      </section>
 
-      <ul>
-        {tasks.map((task) => {
-          return (
-            <li
-              className={task.completed ? "line-through" : ""}
-              key={task.id}
-              onClick={() => completeTask(task)}
-            >
-              {task.title} {String(task.completed)}
+      
+      <section>
+        <input 
+          value={input} 
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Nova tarefa..."
+        />
+        <button onClick={handleAdd}>Add</button>
+
+        <ul style={{ listStyle: 'none', padding: 0 }}>
+          {todos.map(todo => (
+            <li key={todo.id} style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+              <input 
+                type="checkbox" 
+                checked={todo.completed} 
+                onChange={() => setTodos(todos.map(t => t.id === todo.id ? {...t, completed: !t.completed} : t))}
+              />
+              <span style={{ textDecoration: todo.completed ? 'line-through' : 'none' }}>
+                {todo.text}
+              </span>
+              <button onClick={() => setTodos(todos.filter(t => t.id !== todo.id))}>x</button>
             </li>
-          );
-        })}
-      </ul>
-    </>
-  );
-}
-
-export default function Pomodoro() {
-  return (
-    <div className="bg-slate-900 h-screen w-screen text-white">
-      <h1>Tasks</h1>
-
-      <Tasks />
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
+
+export default App;
